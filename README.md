@@ -1,6 +1,6 @@
 # Nextstrain Template
 
-This repository provides a comprehensive Nextstrain analysis of <your virus>. You can choose to perform either a shorter run with specific proteins or a full genome run.
+This repository provides a comprehensive Nextstrain analysis of "your virus". You can choose to perform either a shorter run with specific proteins or a full genome run.
 
 For those unfamiliar with Nextstrain or needing installation guidance, please refer to the [Nextstrain documentation](https://docs.nextstrain.org/en/latest/).
 
