@@ -351,7 +351,8 @@ rule refine:
             --timetree \
             --coalescent {params.coalescent} \
             --date-confidence \
-            {params.clock_rate_string} \
+            --clock-rate {params.clock_rate}\
+            --clock-std-dev {params.clock_std_dev} \
             --date-inference {params.date_inference} \
             --clock-filter-iqd {params.clock_filter_iqd}
         """

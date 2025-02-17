@@ -21,12 +21,12 @@ The `config`, `protein_xy/config`, and `whole_genome/config` directories contain
 - `colors.tsv`: Color scheme
 - `geo_regions.tsv`: Geographical locations
 - `lat_longs.tsv`: Latitude data
-- `dropped_strains.txt`: Dropped strains
-- `clades_genome.tsv`: Virus clade assignments
-- `reference_sequence.gb`: Reference sequence
-- `auspice_config.json`: Auspice configuration file
+- `dropped_strains.txt`: It will exclude these accessions during `augur filter`
+- `clades_genome.tsv`: Manually Labeling Clades on a Nextstrain Tree (see documentation [here](https://docs.nextstrain.org/en/latest/guides/bioinformatics/defining-clades.html))
+- `reference_sequence.gb`: Reference sequence (add manually)
+- `auspice_config.json`: Auspice configuration file - has to be in all data folders!
 
-The reference sequence used is [XYZ, accession number ....](https://www.ncbi.nlm.nih.gov/nucleotide/), sampled in ....
+The reference sequence used is [XYZ, accession number](https://www.ncbi.nlm.nih.gov/nucleotide/), sampled in 19XX.
 
 ## Quickstart
 
@@ -57,9 +57,6 @@ snakemake auspice/<your_virus>_protein_xy.json --cores 9
 snakemake auspice/<your_virus>_whole-genome.json --cores 9
 ```
 
-## Ingest
-For more information on how to run the `ingest`, please refer to the [README](ingest/README.md) in the `ingest` folder.
-
 ### Visualizing the Build
 To visualize the build, use Auspice:
 ```bash
@@ -69,6 +66,9 @@ To run two visualizations simultaneously, you may need to set the port:
 ```bash
 export PORT=4001
 ```
+
+## Ingest
+For more information on how to run the `ingest`, please refer to the [README](ingest/README.md) in the `ingest` folder.
 
 ### Sequences
 Sequences can be downloaded manually or automatically.
