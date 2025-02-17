@@ -1,0 +1,76 @@
+{
+  "title": "Genomic Epidemiology of <your virus>",
+  "maintainers": [
+    {
+      "name": "XXXXXXX YYYYYY",
+      "url": ""
+    },
+    {
+      "name": "Emma Hodcroft",
+      "url": "http://emmahodcroft.com/"
+    }
+  ],
+  "data_provenance": [
+    {
+      "name": "GenBank",
+      "url": "https://www.ncbi.nlm.nih.gov/genbank/"
+    }
+  ],
+  "build_url": "https://github.com/hodcroftlab/....",
+  "colorings": [
+    {
+      "key": "gt",
+      "title": "Subgenotype",
+      "type": "categorical"
+    }, 
+    {
+      "key": "num_date",
+      "title": "Date",
+      "type": "continuous"
+    },
+    {
+      "key": "country",
+      "title": "Country",
+      "type": "categorical"
+    },
+    {
+      "key": "region",
+      "title": "Global Regions",
+      "type": "categorical"
+    },
+    {
+      "key": "isolation_source",
+      "title": "Isolation Source",
+      "type": "categorical"
+    }
+  ],
+  "geo_resolutions": [
+    {
+      "key": "country",
+      "title": "Country"
+    },
+    {
+      "key": "place",
+      "title": "Areas"
+    },
+    {
+      "key": "region",
+      "title": "Global Regions"
+    }
+  ],
+  "panels": [
+    "tree",
+    "map",
+    "entropy"
+  ],
+  "display_defaults": {
+    "color_by": "clade_membership",
+    "geo_resolution": "country",
+    "distance_measure": "num_date",
+    "map_triplicate": true
+  },
+  "filters": [
+    "country",
+    "author"
+  ]
+}

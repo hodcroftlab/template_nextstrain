@@ -1,0 +1,7 @@
+.snakemake
+
+ingest/.snakemake/
+
+scripts/__pycache__/
+
+*.code-workspace
