@@ -95,7 +95,7 @@ rule blast:
     output:
         blast_out = "temp/blast_out.csv"
     params:
-        blast_db = "temp/entero_db_vp1" ##TODO: rename
+        blast_db = "temp/blast_database"
     shell:
         """
         sed -i 's/-//g' {input.seqs_to_blast}
@@ -121,6 +121,8 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with
             --seqs {input.input_seqs} \
             --out_seqs {output.sequences} \
             --range {params.range}
+
+        rm -r temp
         """
 ##############################
 # AUGUR CURATE AND MERGE
