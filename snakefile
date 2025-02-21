@@ -95,7 +95,7 @@ rule blast:
     output:
         blast_out = "temp/blast_out.csv"
     params:
-        blast_db = "temp/entero_db_vp1"
+        blast_db = "temp/entero_db_vp1" ##TODO: rename
     shell:
         """
         sed -i 's/-//g' {input.seqs_to_blast}
@@ -103,19 +103,21 @@ rule blast:
         blastn -task blastn -query {input.seqs_to_blast} -db {params.blast_db} -outfmt '10 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -out {output.blast_out} -evalue 0.0005
         """
 
-rule blast_sort:
+rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with your specific protein)
     input:
-        blast_result = rules.blast.output.blast_out, # output blast (vp1)
+        blast_result = rules.blast.output.blast_out, # output blast (for your protein)
         input_seqs = rules.update_sequences.output.sequences
     output:
         sequences = "{seg}/results/sequences.fasta"
         
     params:
-        matchLen = 300,
-        range="{seg}"
+        protein = [600,915], #TODO: min & max length for protein
+        whole_genome = [6400,8000], #TODO: min & max length for whole genome
+        range = "{seg}" # this is determining the path it takes in blast_sort (protein-specific or whole genome)
     shell:
         """
         python scripts/blast_sort.py --blast {input.blast_result} \
+            --protein_length {params.protein}  --whole_genome_length {params.whole_genome} \
             --seqs {input.input_seqs} \
             --out_seqs {output.sequences} \
             --range {params.range}
