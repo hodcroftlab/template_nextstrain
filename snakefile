@@ -91,7 +91,7 @@ rule update_strain_names:
 rule blast:
     input: 
         blast_db_file = "data/references/reference_blast.fasta",    ####TODO: provide a blast reference
-        seqs_to_blast = rules.update_sequences.output.sequences
+        seqs_to_blast = rules.fetch.output.sequences
     output:
         blast_out = "temp/blast_out.csv"
     params:
@@ -106,7 +106,7 @@ rule blast:
 rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with your specific protein)
     input:
         blast_result = rules.blast.output.blast_out, # output blast (for your protein)
-        input_seqs = rules.update_sequences.output.sequences
+        input_seqs = rules.fetch.output.sequences
     output:
         sequences = "{seg}/results/sequences.fasta"
         
