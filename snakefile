@@ -36,7 +36,7 @@ rule files:
         auspice_config =    "{seg}/config/auspice_config.json",
         clades =            "{seg}/config/clades_genome.tsv",
         meta=               "data/metadata.tsv",
-        extended_metafile=  "data/meta_manual.tsv", ###TODO: Add an empty tsv file to this path or metadata for one of your sequences
+        meta_collab=        "data/meta_collab.tsv", ###TODO: Add an empty tsv file to this path or metadata for one of your sequences
 
 
 files = rules.files.input
@@ -64,6 +64,59 @@ rule fetch:  ####TODO: go to ingest readme and read through instructions and fil
         """
 
 ##############################
+# AUGUR CURATE AND MERGE
+# Change the format of the dates in the metadata
+# Attention: ```augur curate``` only accepts iso 8 formats; please make sure that you save e.g. Excel files in the correct format
+# Merge with other metadata files you might have
+###############################
+
+rule curate:
+    message:
+        """
+        Cleaning up metadata with augur curate
+        """
+    input:
+        metadata=files.meta,  # Path to input metadata file
+        meta_collab = files.meta_collab  # Data shared with us by collaborators
+    params:
+        strain_id_field=config["id_field"],
+        date_fields=config["curate"]["date_fields"],
+        expected_date_formats=config["curate"]["expected_date_formats"],
+    output:
+        metadata = "data/curated/meta_public.tsv",  # Final output file for NCBI metadata
+        meta_collab="data/curated/meta_collab.tsv",  # Curated collaborator metadata
+        final_metadata="data/final_meta.tsv"  # Final merged output file
+    shell:
+        """
+        # Normalize strings for publication metadata
+        augur curate normalize-strings \
+            --id-column {params.strain_id_field} \
+            --metadata {input.metadata} \
+        | augur curate format-dates \
+            --date-fields {params.date_fields} \
+            --no-mask-failure \
+            --expected-date-formats {params.expected_date_formats} \
+            --id-column {params.strain_id_field} \
+            --output-metadata {output.metadata}
+        
+        # Normalize strings and format dates for collab metadata
+        augur curate normalize-strings \
+            --id-column {params.strain_id_field} \
+            --metadata {input.meta_collab} \
+        | augur curate format-dates \
+            --date-fields {params.date_fields} \
+            --no-mask-failure \
+            --expected-date-formats {params.expected_date_formats} \
+            --id-column {params.strain_id_field} \
+            --output-metadata {output.meta_collab}
+        
+        # Merge curated metadata
+        augur merge --metadata metadata={output.metadata} meta_collab={output.meta_collab}\
+            --metadata-id-columns {params.strain_id_field} \
+            --output-metadata {output.final_metadata}
+        """
+
+##############################
 # Update strain names
 # If strain name == accession -> fetching real strain names from genbank
 # Depending on how many sequences you have, it will run for a long time! >30min. Comment out to skip!
@@ -75,7 +128,7 @@ rule update_strain_names:
         Updating strain information in metadata.
         """
     input:
-        file_in =  files.meta
+        file_in =  rules.curate.output.final_metadata
     params:
         backup = "data/strain_names_previous_run.tsv" ####TODO: provide an empty file for first run
     output:
@@ -127,58 +180,6 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with
             --range {params.range}
 
         rm -r temp
-        """
-##############################
-# AUGUR CURATE AND MERGE
-# Change the format of the dates in the metadata
-# Attention: ```augur curate``` only accepts iso 8 formats; please make sure that you save e.g. Excel files in the correct format
-# Merge with other metadata files you might have
-###############################
-
-rule curate:
-    message:
-        """
-        Cleaning up metadata with augur curate
-        """
-    input:
-        metadata=files.extended_metafile,  # Path to input metadata file
-        collab_meta = files.collab_meta  # Data shared with us by collaborators
-    params:
-        strain_id_field=config["id_field"],
-        date_fields=config["curate"]["date_fields"],
-        expected_date_formats=config["curate"]["expected_date_formats"],
-    output:
-        metadata = "data/curated/meta_public.tsv",  # Final output file for publications metadata
-        collab_meta="data/curated/meta_ENPEN.tsv",  # Curated collaborator metadata
-        final_metadata="data/curated/extra_meta.tsv"  # Final merged output file
-    shell:
-        """
-        # Normalize strings for publication metadata
-        augur curate normalize-strings \
-            --id-column {params.strain_id_field} \
-            --metadata {input.metadata} \
-        | augur curate format-dates \
-            --date-fields {params.date_fields} \
-            --no-mask-failure \
-            --expected-date-formats {params.expected_date_formats} \
-            --id-column {params.strain_id_field} \
-            --output-metadata {output.metadata}
-        
-        # Normalize strings and format dates for collab metadata
-        augur curate normalize-strings \
-            --id-column {params.strain_id_field} \
-            --metadata {input.collab_meta} \
-        | augur curate format-dates \
-            --date-fields {params.date_fields} \
-            --no-mask-failure \
-            --expected-date-formats {params.expected_date_formats} \
-            --id-column {params.strain_id_field} \
-            --output-metadata {output.collab_meta}
-        
-        # Merge curated metadata
-        augur merge --metadata metadata={output.metadata} collab_meta={output.collab_meta}\
-            --metadata-id-columns {params.strain_id_field} \
-            --output-metadata {output.final_metadata}
         """
 
 ##############################
