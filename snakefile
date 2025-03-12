@@ -7,6 +7,10 @@
 # To run a default whole genome run (>6400bp):
 # snakemake auspice/<your_virus>_genome.json --cores 9
 
+# Load config file
+if not config:
+    configfile: "config/config.yaml"
+
 ###############
 wildcard_constraints:
     seg="protein_xy|genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
@@ -131,62 +135,48 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with
 # Merge with other metadata files you might have
 ###############################
 
-rule curate_meta_dates:
+rule curate:
     message:
         """
-        Cleaning up metadata with augur curate and merge your metadata with the one from ingest
+        Cleaning up metadata with augur curate
         """
     input:
-        meta = files.meta,
-        metadata=files.extended_metafile,  ###TODO: Add an empty tsv file to this path or metadata for one of your sequence.
+        metadata=files.extended_metafile,  # Path to input metadata file
+        collab_meta = files.collab_meta  # Data shared with us by collaborators
     params:
-        strain_id_field="accession",
-        date_column="date",
-        format=['%Y', '%m.%Y', '%d.%m.%Y', "%b-%Y", "%d-%b-%Y","%Y-%m-%d"],
-        temp_metadata="data/temp_curated.tsv"  # Temporary file
+        strain_id_field=config["id_field"],
+        date_fields=config["curate"]["date_fields"],
+        expected_date_formats=config["curate"]["expected_date_formats"],
     output:
-        meta = "data/metadata_ingest_curated.tsv",
-        metadata = "data/metadata_manual_curated.tsv",
-        final_metadata="data/metadata_curated_merged.tsv"  # Final merged output file
-
+        metadata = "data/curated/meta_public.tsv",  # Final output file for publications metadata
+        collab_meta="data/curated/meta_ENPEN.tsv",  # Curated collaborator metadata
+        final_metadata="data/curated/extra_meta.tsv"  # Final merged output file
     shell:
         """
-        # Normalize strings for metadata
-        augur curate normalize-strings --metadata {input.metadata} \
+        # Normalize strings for publication metadata
+        augur curate normalize-strings \
             --id-column {params.strain_id_field} \
-            --output-metadata {params.temp_metadata}
-
-        # Format dates for metadata
-        augur curate format-dates \
-            --metadata {params.temp_metadata} \
-            --date-fields {params.date_column} \
+            --metadata {input.metadata} \
+        | augur curate format-dates \
+            --date-fields {params.date_fields} \
             --no-mask-failure \
-            --expected-date-formats {params.format} \
+            --expected-date-formats {params.expected_date_formats} \
             --id-column {params.strain_id_field} \
             --output-metadata {output.metadata}
         
-        # Remove temporary file
-        rm {params.temp_metadata}
-
-        # Normalize strings for genbank metadata
-        augur curate normalize-strings --metadata {input.meta} \
+        # Normalize strings and format dates for collab metadata
+        augur curate normalize-strings \
             --id-column {params.strain_id_field} \
-            --output-metadata {params.temp_metadata}
-
-        # Format dates for genbank metadata
-        augur curate format-dates \
-            --metadata {params.temp_metadata} \
-            --date-fields {params.date_column} \
+            --metadata {input.collab_meta} \
+        | augur curate format-dates \
+            --date-fields {params.date_fields} \
             --no-mask-failure \
-            --expected-date-formats {params.format} \
+            --expected-date-formats {params.expected_date_formats} \
             --id-column {params.strain_id_field} \
-            --output-metadata {output.meta}
+            --output-metadata {output.collab_meta}
         
-        # Remove temporary file
-        rm {params.temp_metadata}
-
         # Merge curated metadata
-        augur merge --metadata meta={output.meta} extended_meta={output.metadata}\
+        augur merge --metadata metadata={output.metadata} collab_meta={output.collab_meta}\
             --metadata-id-columns {params.strain_id_field} \
             --output-metadata {output.final_metadata}
         """
@@ -223,14 +213,14 @@ rule filter:
     input:
         sequences = rules.blast_sort.output.sequences,
         sequence_index = rules.index_sequences.output.sequence_index,
-        metadata =rules.curate_meta_dates.output.final_metadata,
+        metadata =rules.curate.output.final_metadata,
         exclude = files.dropped_strains
     output:
         sequences = "{seg}/results/filtered.fasta"
     params:
         group_by = "country",
         sequences_per_group = 4000, # add a limit per group
-        strain_id_field= "accession",
+        strain_id_field= config["id_field"],
         min_date = 1950  # add a reasonable min date
     shell:
         """
@@ -330,7 +320,7 @@ rule refine:
     input:
         tree = rules.tree.output.tree,
         alignment = rules.align.output.alignment,
-        metadata = rules.curate_meta_dates.output.final_metadata,
+        metadata = rules.curate.output.final_metadata,
         reference = rules.reference_gb_to_fasta.output.reference
     output:
         tree = "{seg}/results/tree.nwk",
@@ -339,7 +329,7 @@ rule refine:
         coalescent = "opt",
         date_inference = "marginal",
         clock_filter_iqd = 3, # set to 6 if you want more control over outliers
-        strain_id_field ="accession",
+        strain_id_field = config["id_field"],
         clock_rate = 0.004, # remove for estimation by augur; check literature
         clock_std_dev = 0.0015
 
@@ -408,13 +398,13 @@ rule traits:
     message: "Inferring ancestral traits for {params.traits!s}"
     input:
         tree = rules.refine.output.tree,
-        metadata =rules.curate_meta_dates.output.final_metadata
+        metadata =rules.curate.output.final_metadata
     output:
         node_data = "{seg}/results/traits.json"
         
     params:
         traits = "country",
-        strain_id_field= "accession"
+        strain_id_field= config["id_field"]
     shell:
         """
         augur traits \
@@ -454,7 +444,7 @@ rule export:
     message: "Creating auspice JSONs"
     input:
         tree = rules.refine.output.tree,
-        metadata = rules.curate_meta_dates.output.final_metadata,
+        metadata = rules.curate.output.final_metadata,
         branch_lengths = rules.refine.output.node_data,
         traits = rules.traits.output.node_data,
         nt_muts = rules.ancestral.output.node_data,
@@ -464,10 +454,10 @@ rule export:
         lat_longs = files.lat_longs,
         auspice_config = files.auspice_config
     params:
-        strain_id_field= "accession"
+        strain_id_field= config["id_field"]
 
     output:
-        auspice_json = "auspice/<your_virus>_{seg}-accession.json"
+        auspice_json = "auspice/<your_virus>_{seg}.json"
         
     shell:
         """
@@ -483,30 +473,6 @@ rule export:
             --output {output.auspice_json}
         """
         
-###############################
-# Change from accession to strain name view in tree
-################################
-
-rule rename_json:
-    input:
-        auspice_json= rules.export.output.auspice_json,
-        metadata =rules.curate_meta_dates.output.final_metadata,
-    output:
-        auspice_json="auspice/<your_virus>_{seg}.json"
-    params:
-        strain_id_field="accession",
-        display_strain_field= "strain"
-    shell:
-        """
-        python3 scripts/set_final_strain_name.py --metadata {input.metadata} \
-                --metadata-id-columns {params.strain_id_field} \
-                --input-auspice-json {input.auspice_json} \
-                --display-strain-name {params.display_strain_field} \
-                --output {output.auspice_json}
-
-        mkdir -p auspice/accession/ && mv {input.auspice_json} auspice/accession/
-        """
-
 rule clean:
     message: "Removing directories: {params}"
     params:
