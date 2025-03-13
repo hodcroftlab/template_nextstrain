@@ -12,6 +12,7 @@ if not config:
     configfile: "config/config.yaml"
 
 ###############
+#ensure protein_xy name similar to that found in the reference_sequence.gb CDS
 wildcard_constraints:
     seg="protein_xy|genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
    
@@ -145,22 +146,40 @@ rule update_strain_names:
 # cut out your protein from fasta sequences
 ###############################
 
+rule extract:
+    input: 
+        genbank_file = files.reference
+    output: 
+        extracted_fasta = "{seg}/results/extracted.fasta"    
+    params:
+        product_name = "{seg}"
+    shell:
+        """
+        python scripts/extract_gene_from_whole_genome.py \
+        --genbank_file {input.genbank_file} \
+        --output_fasta {output.extracted_fasta} \
+        --product_name {params.product_name}
+
+        """
+
 rule blast:
     input: 
-        blast_db_file = "data/references/reference_blast.fasta",    ####TODO: provide a blast reference
+        blast_db_file = rules.extract.output.extracted_fasta,  
         seqs_to_blast = rules.fetch.output.sequences
     output:
-        blast_out = "temp/blast_out.csv"
+        blast_out = "temp/{seg}/blast_out.csv"
     params:
-        blast_db = "temp/blast_database"
+        blast_db = "temp/{seg}/blast_database"
     shell:
         """
         sed -i 's/-//g' {input.seqs_to_blast}
         makeblastdb -in {input.blast_db_file} -out {params.blast_db} -dbtype nucl
-        blastn -task blastn -query {input.seqs_to_blast} -db {params.blast_db} -outfmt '10 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -out {output.blast_out} -evalue 0.0005
+        blastn -task blastn -query {input.seqs_to_blast} -db {params.blast_db}\
+        -outfmt '10 qseqid sseqid pident length mismatch gapopen qstart qend sstart \
+        send evalue bitscore qcovs' -out {output.blast_out} -evalue 0.0005
         """
 
-rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with your specific protein)
+rule blast_sort: #TODO: change the parameters in blast_sort.py (replace lengths with your specific protein)
     input:
         blast_result = rules.blast.output.blast_out, # output blast (for your protein)
         input_seqs = rules.fetch.output.sequences
@@ -168,16 +187,17 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace vp1 with
         sequences = "{seg}/results/sequences.fasta"
         
     params:
-        protein = [600,915], #TODO: min & max length for protein
-        whole_genome = [6400,8000], #TODO: min & max length for whole genome
-        range = "{seg}" # this is determining the path it takes in blast_sort (protein-specific or whole genome)
+        range = "{seg}",  # Determines which protein (or whole genome) is processed
+        min_length = lambda wildcards: {"protein_xy": 2400, "protein_ab": 780, "protein_cd": 180, "protein_ef": 450, "whole_genome": 20000}[wildcards.seg],  # Min length
+        max_length = lambda wildcards: {"protein_xy": 4000, "protein_ab": 1300, "protein_cd": 300, "protein_ef": 750, "whole_genome": 28000}[wildcards.seg]  # Max length
     shell:
         """
         python scripts/blast_sort.py --blast {input.blast_result} \
-            --protein_length {params.protein}  --whole_genome_length {params.whole_genome} \
             --seqs {input.input_seqs} \
             --out_seqs {output.sequences} \
-            --range {params.range}
+            --range {params.range} \
+            --min_length {params.min_length} \
+            --max_length {params.max_length}
 
         rm -r temp
         """
