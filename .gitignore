@@ -5,3 +5,12 @@ ingest/.snakemake/
 scripts/__pycache__/
 
 *.code-workspace
+
+*.json ## make sure to exclude all large json files
+
+# Usually excluded
+# .env
+# data/
+# */data/
+# */results/
+
