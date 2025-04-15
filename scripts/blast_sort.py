@@ -7,7 +7,7 @@ def parse_args():
     parser.add_argument('--blast', required=True, help='BLAST results file (CSV)')
     parser.add_argument('--seqs', required=True, help='Input sequences file (FASTA)')
     parser.add_argument('--out_seqs', required=True, help='Output sequences file (FASTA)')
-    parser.add_argument('--range', required=True, , help='Specify the region to filter: protein_xy')
+    parser.add_argument('--range', required=True, help='Specify the region to filter: protein_xy')
     parser.add_argument('--min_length', type=int, required=True, help='Minimum length for the specified range')
     parser.add_argument('--max_length', type=int, required=True, help='Maximum length for the specified range')
     return parser.parse_args()
@@ -54,5 +54,5 @@ def main():
     SeqIO.write(selected_seqs, args.out_seqs, "fasta")
     print(f"Filtering retained {len(selected_seqs)} out of {len(sequences)} sequences in this file")
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()
