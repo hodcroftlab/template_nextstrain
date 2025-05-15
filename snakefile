@@ -298,6 +298,7 @@ rule align:
         --allowed-mismatches {params.nuc_mismatch_all} \
         --min-length {params.nuc_seed_length} \
         --include-reference false \
+        --retry-reverse-complement true \ #deals with potential reverse complement sequences 
         --output-fasta {output.alignment} 
         """
 
