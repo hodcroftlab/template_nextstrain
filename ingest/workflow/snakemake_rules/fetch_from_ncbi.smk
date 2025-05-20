@@ -47,7 +47,7 @@ rule fetch_ncbi_dataset_package:
         "benchmarks/fetch_ncbi_dataset_package.txt"
     shell:
         """
-        datasets download virus genome taxon {params.ncbi_taxon_id:q} \
+        datasets download virus genome taxon "{params.ncbi_taxon_id:q}" \
             --no-progressbar \
             --filename {output.dataset_package}
         """
