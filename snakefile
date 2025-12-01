@@ -126,17 +126,18 @@ rule curate:
 rule update_strain_names:
     message:
         """
-        Updating strain information in metadata.
+        Updating strain name in metadata.
         """
     input:
-        file_in =  rules.curate.output.final_metadata
+        file_in =  files.METADATA
     params:
-        backup = "data/strain_names_previous_run.tsv" ####TODO: provide an empty file for first run
+        backup = "data/strain_names_previous_run.tsv"
     output:
-        file_out = "data/updated_strain_names.tsv"
+        file_out = files.strain_names
     shell:
         """
         time bash scripts/update_strain.sh {input.file_in} {params.backup} {output.file_out}
+        cp {output.file_out} {params.backup}
         """
 
 
