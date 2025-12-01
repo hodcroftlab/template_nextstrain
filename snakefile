@@ -14,15 +14,15 @@ if not config:
 ###############
 #ensure protein_xy name similar to that found in the reference_sequence.gb CDS
 wildcard_constraints:
-    seg="protein_xy|genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
+    seg="protein_xy|whole_genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
    
 # Define segments to analyze
-segments = ['protein_xy', 'genome'] # This is only for the expand in rule all
+segments = ['protein_xy', 'whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
 
 # Expand augur JSON paths
 rule all:
     input:
-        augur_jsons = expand("auspice/<your_virus>_{segs}.json", segs=segments) ## TODO: replace <your_virus> with actual virus name (Ctrl+H)
+        augur_jsons = expand("auspice/<your_virus>_{segs}.json", segs=segments) ## TODO: replace <your_virus> with actual virus name (Ctrl+H). Typical naming convention: e.g., virus_A6
 
 
 # Rule to handle configuration files and data file paths
@@ -493,6 +493,17 @@ rule export:
             --lat-longs {input.lat_longs} \
             --auspice-config {input.auspice_config} \
             --output {output.auspice_json}
+        """
+
+rule rename_whole_genome:
+    message: "Rename whole-genome built"
+    input: 
+        json="auspice/<your_virus>_whole_genome.json"
+    output:
+        json="auspice/<your_virus>_whole-genome.json" # easier view in auspice
+    shell:
+        """
+        mv {input.json} {output.json}
         """
         
 rule clean:
