@@ -7,9 +7,18 @@
 # To run a default whole genome run (>6400bp):
 # snakemake auspice/<your_virus>_genome.json --cores 9
 
+###############
+from dotenv import load_dotenv
+import os
+from datetime import date
+import glob
+
 # Load config file
 if not config:
     configfile: "config/config.yaml"
+
+
+load_dotenv(".env")
 
 ###############
 #ensure protein_xy name similar to that found in the reference_sequence.gb CDS
@@ -19,11 +28,8 @@ wildcard_constraints:
 # Define segments to analyze
 segments = ['protein_xy', 'whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
 
-# Expand augur JSON paths
-rule all:
-    input:
-        augur_jsons = expand("auspice/<your_virus>_{segs}.json", segs=segments) ## TODO: replace <your_virus> with actual virus name (Ctrl+H). Typical naming convention: e.g., virus_A6
-
+# parameters
+DOWNLOAD_INGEST = True
 
 # Rule to handle configuration files and data file paths
 rule files:
@@ -34,35 +40,39 @@ rule files:
         regions=            "config/geo_regions.tsv",
         lat_longs =         "config/lat_longs.tsv",
         reference =         "{seg}/config/reference_sequence.gb", ####TODO: provide a reference sequence
+        gff_reference =     "{seg}/config/annotation.gff3",
         auspice_config =    "{seg}/config/auspice_config.json",
         clades =            "{seg}/config/clades_genome.tsv",
-        meta=               "data/metadata.tsv",
         meta_collab=        "data/meta_collab.tsv", ###TODO: Add an empty tsv file to this path or metadata for one of your sequences
-
+        SEQUENCES =         "data/sequences.fasta",
+        METADATA =          "data/metadata.tsv"
 
 files = rules.files.input
+
+# Expand augur JSON paths
+rule all:
+    input:
+        augur_jsons = expand("auspice/<your_virus>_{segs}.json", segs=segments), ## TODO: replace <your_virus> with actual virus name (Ctrl+H). Typical naming convention: e.g., virus_A6
+        meta = files.METADATA,
+        seq = files.SEQUENCES
+
 
 ##############################
 # Download from NBCI Virus with ingest snakefile
 ###############################
-
-rule fetch:  ####TODO: go to ingest readme and read through instructions and files needed!
-    input:
-        dir = "ingest"
-    output:
-        sequences="data/sequences.fasta",
-        metadata=files.meta
-    params:
-        seq="ingest/data/sequences.fasta",
-        meta="ingest/data/metadata.tsv"
-    shell:
-        """
-        cd {input.dir} 
-        snakemake --cores 9 all
-        cd ../
-        cp -u {params.seq} {output.sequences}
-        cp -u {params.meta} {output.metadata}
-        """
+if DOWNLOAD_INGEST:
+    rule fetch:
+        input:
+            dir = "ingest"
+        output:
+            sequences=files.SEQUENCES,
+            metadata=files.METADATA
+        shell:
+            """
+            cd {input.dir}
+            snakemake --cores 9 all
+            cd ../
+            """
 
 ##############################
 # AUGUR CURATE AND MERGE
@@ -77,7 +87,7 @@ rule curate:
         Cleaning up metadata with augur curate
         """
     input:
-        metadata=files.meta,  # Path to input metadata file
+        metadata = files.METADATA,  # Path to input metadata file
         meta_collab = files.meta_collab  # Data shared with us by collaborators
     params:
         strain_id_field=config["id_field"],
@@ -86,7 +96,7 @@ rule curate:
     output:
         metadata = "data/curated/meta_public.tsv",  # Final output file for NCBI metadata
         meta_collab="data/curated/meta_collab.tsv",  # Curated collaborator metadata
-        final_metadata="data/final_meta.tsv"  # Final merged output file
+        final_metadata="data/curated/all_meta.tsv"  # Final merged output file
     shell:
         """
         # Normalize strings for publication metadata
@@ -116,30 +126,6 @@ rule curate:
             --metadata-id-columns {params.strain_id_field} \
             --output-metadata {output.final_metadata}
         """
-
-##############################
-# Update strain names
-# If strain name == accession -> fetching real strain names from genbank
-# Depending on how many sequences you have, it will run for a long time! >30min. Comment out to skip!
-###############################
-
-rule update_strain_names:
-    message:
-        """
-        Updating strain name in metadata.
-        """
-    input:
-        file_in =  files.METADATA
-    params:
-        backup = "data/strain_names_previous_run.tsv"
-    output:
-        file_out = files.strain_names
-    shell:
-        """
-        time bash scripts/update_strain.sh {input.file_in} {params.backup} {output.file_out}
-        cp {output.file_out} {params.backup}
-        """
-
 
 ##############################
 # BLAST
@@ -280,28 +266,49 @@ rule reference_gb_to_fasta:
 rule align: 
     message:
         """
-        Aligning sequences to {input.reference} using Nextalign.
+        Aligning sequences to {input.reference} using Nextclade.
         """
     input:
+        gff_reference = files.gff_reference,
         sequences = rules.filter.output.sequences,
         reference = rules.reference_gb_to_fasta.output.reference
     output:
-        alignment = "{seg}/results/aligned.fasta"
-
+        alignment = "{seg}/results/aligned.fasta",
+        tsv = "{seg}/results/nextclade.tsv",    
     params:
-            nuc_mismatch_all = 10,
-            nuc_seed_length = 30
+        penalty_gap_extend = config["align"]["penalty_gap_extend"],
+        penalty_gap_open = config["align"]["penalty_gap_open"],
+        penalty_gap_open_in_frame = config["align"]["penalty_gap_open_in_frame"],
+        penalty_gap_open_out_of_frame = config["align"]["penalty_gap_open_out_of_frame"],
+        kmer_length = config["align"]["kmer_length"],
+        kmer_distance = config["align"]["kmer_distance"],
+        min_match_length = config["align"]["min_match_length"],
+        allowed_mismatches = config["align"]["allowed_mismatches"],
+        min_length = config["align"]["min_length"]
+        ## min_length
+    threads: workflow.cores
     shell:
         """
-        nextclade run \
-        {input.sequences}  \
-        --input-ref {input.reference}\
-        --allowed-mismatches {params.nuc_mismatch_all} \
-        --min-length {params.nuc_seed_length} \
+        nextclade3 run \
+        -j {threads} \
+        {input.sequences} \
+        --input-ref {input.reference} \
+        --input-annotation {input.gff_reference} \
+        --penalty-gap-open {params.penalty_gap_open} \
+        --penalty-gap-extend {params.penalty_gap_extend} \
+        --penalty-gap-open-in-frame {params.penalty_gap_open_in_frame} \
+        --penalty-gap-open-out-of-frame {params.penalty_gap_open_out_of_frame} \
+        --kmer-length {params.kmer_length} \
+        --kmer-distance {params.kmer_distance} \
+        --min-match-length {params.min_match_length} \
+        --allowed-mismatches {params.allowed_mismatches} \
+        --min-length {params.min_length} \
         --include-reference false \
-        --retry-reverse-complement true \ #deals with potential reverse complement sequences 
-        --output-fasta {output.alignment} 
+        --output-tsv {output.tsv} \
+        --output-translations "{wildcards.seg}/results/translations/cds_{{cds}}.translation.fasta" \
+        --output-fasta {output.alignment}
         """
+
 
 ##############################
 # Building a tree
