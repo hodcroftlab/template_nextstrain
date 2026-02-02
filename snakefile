@@ -8,28 +8,33 @@
 # snakemake auspice/<your_virus>_genome.json --cores 9
 
 ###############
-from dotenv import load_dotenv
-import os
-from datetime import date
-import glob
+TAXID = "<TAXID>"  # NCBI Taxonomy ID for your virus
 
-# Load config file
 if not config:
     configfile: "config/config.yaml"
 
+import os
+from datetime import date
 
-load_dotenv(".env")
+# Load environment variables
+# Try to load .env, but don't fail if it doesn't exist (for Actions)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(".env")
+except:
+    pass
+
 
 ###############
 #ensure protein_xy name similar to that found in the reference_sequence.gb CDS
 wildcard_constraints:
-    seg="protein_xy|whole_genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
+    seg="protein_xy|protein_yz|whole_genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
    
 # Define segments to analyze
-segments = ['protein_xy', 'whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
+segments = ['protein_xy', 'protein_yz','whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
 
 # parameters
-DOWNLOAD_INGEST = True
+FETCH_SEQUENCES = True
 
 # Rule to handle configuration files and data file paths
 rule files:
@@ -39,7 +44,7 @@ rule files:
         dropped_strains =   "config/dropped_strains.txt",
         regions=            "config/geo_regions.tsv",
         lat_longs =         "config/lat_longs.tsv",
-        reference =         "{seg}/config/reference_sequence.gb", ####TODO: provide a reference sequence
+        reference =         "config/reference_sequence.gb", ####TODO: provide a reference sequence (whole-genome) in genabnk format
         gff_reference =     "{seg}/config/annotation.gff3",
         auspice_config =    "{seg}/config/auspice_config.json",
         clades =            "{seg}/config/clades_genome.tsv",
@@ -60,17 +65,18 @@ rule all:
 ##############################
 # Download from NBCI Virus with ingest snakefile
 ###############################
-if DOWNLOAD_INGEST:
+if FETCH_SEQUENCES == True:
     rule fetch:
         input:
             dir = "ingest"
         output:
             sequences=files.SEQUENCES,
             metadata=files.METADATA
+        threads: workflow.cores
         shell:
             """
-            cd {input.dir}
-            snakemake --cores 9 all
+            cd {input.dir} 
+            snakemake --cores {threads} all
             cd ../
             """
 
@@ -87,44 +93,33 @@ rule curate:
         Cleaning up metadata with augur curate
         """
     input:
-        metadata = files.METADATA,  # Path to input metadata file
-        meta_collab = files.meta_collab  # Data shared with us by collaborators
+        metadata = files.METADATA,  # Path to input metadata file        
+        meta_collab = files.meta_collab,  # Data shared with us by collaborators
     params:
         strain_id_field=config["id_field"],
         date_fields=config["curate"]["date_fields"],
         expected_date_formats=config["curate"]["expected_date_formats"],
     output:
-        metadata = "data/curated/meta_public.tsv",  # Final output file for NCBI metadata
-        meta_collab="data/curated/meta_collab.tsv",  # Curated collaborator metadata
-        final_metadata="data/curated/all_meta.tsv"  # Final merged output file
+        merge = temp("data/merge_meta.tsv"),  # Final output file for publications metadata
+        meta="data/curated/all_meta.tsv"  # Final merged output file
     shell:
-        """
-        # Normalize strings for publication metadata
-        augur curate normalize-strings \
-            --id-column {params.strain_id_field} \
-            --metadata {input.metadata} \
-        | augur curate format-dates \
-            --date-fields {params.date_fields} \
-            --no-mask-failure \
-            --expected-date-formats {params.expected_date_formats} \
-            --id-column {params.strain_id_field} \
-            --output-metadata {output.metadata}
-        
-        # Normalize strings and format dates for collab metadata
-        augur curate normalize-strings \
-            --id-column {params.strain_id_field} \
-            --metadata {input.meta_collab} \
-        | augur curate format-dates \
-            --date-fields {params.date_fields} \
-            --no-mask-failure \
-            --expected-date-formats {params.expected_date_formats} \
-            --id-column {params.strain_id_field} \
-            --output-metadata {output.meta_collab}
-        
+        """        
         # Merge curated metadata
-        augur merge --metadata metadata={output.metadata} meta_collab={output.meta_collab}\
+        augur merge --metadata metadata={input.metadata} meta_collab={input.meta_collab} \
             --metadata-id-columns {params.strain_id_field} \
-            --output-metadata {output.final_metadata}
+            --output-metadata {output.merge}
+        
+        # Normalize strings and format dates for metadata
+        augur curate normalize-strings \
+            --id-column {params.strain_id_field} \
+            --metadata {output.merge} \
+        | augur curate format-dates \
+            --date-fields {params.date_fields} \
+            --no-mask-failure \
+            --expected-date-formats {params.expected_date_formats} \
+            --id-column {params.strain_id_field} \
+            --output-metadata {output.meta}
+        echo "Curated metadata saved to {output.meta}"
         """
 
 ##############################
@@ -137,16 +132,22 @@ rule extract:
     input: 
         genbank_file = files.reference
     output: 
-        extracted_fasta = "{seg}/results/extracted.fasta"    
+        extracted_fasta = "{seg}/config/reference.fasta",    
+        extracted_genbank = "{seg}/config/reference.gbk",
     params:
-        product_name = "{seg}"
+        product_name = "{seg}",
+        taxid = TAXID,
+        annotation = lambda wildcards: f'--output_gff {wildcards.seg}/config/annotation.gff3' if wildcards.seg != "whole_genome" else ""
+
     shell:
         """
         python scripts/extract_gene_from_whole_genome.py \
         --genbank_file {input.genbank_file} \
         --output_fasta {output.extracted_fasta} \
-        --product_name {params.product_name}
-
+        --product_name {params.product_name} \
+        --output_genbank {output.extracted_genbank} \
+        --taxid {params.taxid} \
+        {params.annotation}
         """
 
 rule blast:
@@ -156,17 +157,16 @@ rule blast:
     output:
         blast_out = "temp/{seg}/blast_out.csv"
     params:
-        blast_db = "temp/{seg}/blast_database"
+        blast_db =  "temp/{seg}/blast_database"
     shell:
         """
         sed -i 's/-//g' {input.seqs_to_blast}
         makeblastdb -in {input.blast_db_file} -out {params.blast_db} -dbtype nucl
-        blastn -task blastn -query {input.seqs_to_blast} -db {params.blast_db}\
-        -outfmt '10 qseqid sseqid pident length mismatch gapopen qstart qend sstart \
-        send evalue bitscore qcovs' -out {output.blast_out} -evalue 0.0005
+        blastn -task blastn -query {input.seqs_to_blast} -db {params.blast_db} \
+        -outfmt '10 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -out {output.blast_out} -evalue 0.0005
         """
 
-rule blast_sort: #TODO: change the parameters in blast_sort.py (replace lengths with your specific protein)
+rule blast_sort:
     input:
         blast_result = rules.blast.output.blast_out, # output blast (for your protein)
         input_seqs = rules.fetch.output.sequences
@@ -174,9 +174,9 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace lengths 
         sequences = "{seg}/results/sequences.fasta"
         
     params:
-        range = "{seg}",  # Determines which protein (or whole genome) is processed
-        min_length = lambda wildcards: {"protein_xy": 2400, "protein_ab": 780, "protein_cd": 180, "protein_ef": 450, "whole_genome": 20000}[wildcards.seg],  # Min length
-        max_length = lambda wildcards: {"protein_xy": 4000, "protein_ab": 1300, "protein_cd": 300, "protein_ef": 750, "whole_genome": 28000}[wildcards.seg]  # Max length
+        range = "{seg}",  # Determines which protein (or whole genome) is processed - names must match seg in wildcard_constraints
+        min_length = lambda wildcards: {"protein_xy": 600, "protein_yz": 2000, "whole_genome": 6400}[wildcards.seg],  # Min length
+        max_length = lambda wildcards: {"protein_xy": 900, "protein_yz": 2600, "whole_genome": 8000}[wildcards.seg]  # Max length
     shell:
         """
         python scripts/blast_sort.py --blast {input.blast_result} \
@@ -185,8 +185,6 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace lengths 
             --range {params.range} \
             --min_length {params.min_length} \
             --max_length {params.max_length}
-
-        rm -r temp
         """
 
 ##############################
@@ -197,6 +195,7 @@ rule blast_sort: #TODO: change the parameters in blast_sort.py (replace lengths 
 rule index_sequences:
     message:
         """
+        Segment: {wildcards.seg}
         Creating an index of sequence composition for filtering
         """
     input:
@@ -213,6 +212,8 @@ rule index_sequences:
 rule filter:
     message:
         """
+        Segment: {wildcards.seg}
+
         Filtering to
           - {params.sequences_per_group} sequence(s) per {params.group_by!s}
           - from {params.min_date} onwards
@@ -249,29 +250,16 @@ rule filter:
 # Reference for alignment added to sub-folders
 ###############################
 
-rule reference_gb_to_fasta:
-    message:
-        """
-        Converting reference sequence from genbank to fasta format and putting it in the reference folders of your proteins
-        """
-    input:
-        reference = files.reference
-
-    output:
-        reference = "{seg}/results/reference_sequence.fasta"
-    run:
-        from Bio import SeqIO 
-        SeqIO.convert(input.reference, "genbank", output.reference, "fasta")
-
 rule align: 
     message:
         """
+        Segment: {wildcards.seg}
         Aligning sequences to {input.reference} using Nextclade.
         """
     input:
         gff_reference = files.gff_reference,
         sequences = rules.filter.output.sequences,
-        reference = rules.reference_gb_to_fasta.output.reference
+        reference = rules.extract.output.extracted_fasta,
     output:
         alignment = "{seg}/results/aligned.fasta",
         tsv = "{seg}/results/nextclade.tsv",    
@@ -317,7 +305,8 @@ rule align:
 rule tree:
     message:
         """
-        Creating a maximum likelihood tree
+        Segment: {wildcards.seg}
+        Creating a maximum likelihood tree with IQ-TREE
         """
     input:
         alignment = rules.align.output.alignment
@@ -341,6 +330,7 @@ rule tree:
 rule refine:
     message:
         """
+        Segment: {wildcards.seg}
         Refining tree by rerooting and resolving polytomies
           - estimate timetree
           - use {params.coalescent} coalescent timescale
@@ -350,8 +340,7 @@ rule refine:
     input:
         tree = rules.tree.output.tree,
         alignment = rules.align.output.alignment,
-        metadata = rules.curate.output.final_metadata,
-        reference = rules.reference_gb_to_fasta.output.reference
+        metadata = rules.curate.output.final_metadata
     output:
         tree = "{seg}/results/tree.nwk",
         node_data = "{seg}/results/branch_lengths.json"
