@@ -1,12 +1,12 @@
-#To run this script use: 
-# python extract_gene_from_whole_genome.py --genbank_file ../ingest/data/references/nl63_full_reference.gb --output_directory ../data/references --product_names "spike protein" "membrane protein" "nucleocapsid protein"
-#use  nargs='+', if want multiple protein names
+# To run this script use: 
+# python extract_gene_from_whole_genome.py --genbank_file ../ingest/data/references/full_reference.gb --output_directory ../data/references --product_names "protein_xy"
+# use  nargs='+', if want multiple protein names
+
 import os
 import argparse
 from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 import re
-import ipdb
 
 def parse_args():
     parser = argparse.ArgumentParser()
