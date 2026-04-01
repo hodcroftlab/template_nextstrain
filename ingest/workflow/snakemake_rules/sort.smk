@@ -24,7 +24,7 @@ rule metadata:
         metadata = rules.curate.output.metadata,
         sequences = "data/sequences.fasta"
     output:
-        metadata = "data/metadata_raw.tsv"
+        metadata = "data/metadata.tsv"
     run:
         import pandas as pd
         from Bio import SeqIO
@@ -38,7 +38,7 @@ rule nextclade:
         sequences = "data/sequences.fasta",
         ref = "data/references/reference.fasta"
     output:
-        nextclade = "data/references/nextclade.tsv"
+        nextclade = "data/nextclade.tsv"
     params:
         dataset = "data/references/",
         output_columns = "seqName clade qc.overallScore qc.overallStatus alignmentScore  alignmentStart  alignmentEnd  coverage dynamic"
@@ -53,7 +53,7 @@ rule nextclade:
 
 rule extend_metadata: 
     input:
-        nextclade = "data/references/nextclade.tsv",
+        nextclade = "data/nextclade.tsv",
         metadata = "data/metadata_raw.tsv"
     output:
         metadata = "data/metadata.tsv"
