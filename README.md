@@ -5,6 +5,7 @@ This repository provides a reproducible workflow for building Nextstrain phyloge
 For questions about Nextstrain or installation, refer to the [Nextstrain documentation](https://docs.nextstrain.org/en/latest/).
 
 ## Table of Contents
+
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -24,6 +25,7 @@ For questions about Nextstrain or installation, refer to the [Nextstrain documen
 ## Prerequisites
 
 Ensure you have the following installed:
+
 - Python ≥ 3.8
 - Micromamba or Conda
 - Snakemake ≥ 7
@@ -32,12 +34,14 @@ Ensure you have the following installed:
 ## Installation
 
 1. **Clone the repository:**
+
     ```bash
     git clone git@github.com:hodcroftlab/template_nextstrain.git
     cd template_nextstrain
     ```
 
 2. **Create and activate the Nextstrain environment:**
+
     ```bash
     micromamba create -n nextstrain \
       --override-channels --strict-channel-priority \
@@ -49,6 +53,7 @@ Ensure you have the following installed:
     ```
 
 3. **Install additional dependencies:**
+
     ```bash
     sudo apt-get update
     sudo apt-get install -y unzip
@@ -62,10 +67,13 @@ Ensure you have the following installed:
 1. **Set TAXID** in the `snakefile` (line 11)
 2. **Generate reference files** (see [Setup Instructions](#setup-instructions))
 3. **Run the workflow:**
+
     ```bash
     snakemake --cores 9 all
     ```
+
 4. **View results:**
+
     ```bash
     auspice view --datasetDir auspice
     ```
@@ -110,6 +118,7 @@ This repository includes the following directories and files:
 ### Update Snakefile Parameters
 
 Edit the `snakefile` to set your virus details:
+
 - **Line 11:** Set `TAXID` to the NCBI Taxonomy ID for your virus
 - **Line 34:** Update `segments` list to match your analysis (e.g., `['vp1', 'whole_genome']`)
 - **Line 60:** Replace `<your_virus>` with your virus name in the output file naming
@@ -123,11 +132,13 @@ python3 ingest/bin/generate_from_genbank.py --reference "<accession>" --output-d
 ```
 
 When prompted for CDS annotation selection:
+
 - Enter `[0]` for the first option
 - Enter `[product]` to use product names, or leave blank for manual selection
 - Enter `[2]` for the final selection
 
 **Generated files:**
+
 - `config/reference_sequence.gb` — GenBank reference
 - `config/reference.fasta` — Whole genome FASTA (used by other rules)
 - Segment-specific files are generated automatically during the workflow (e.g., `protein_xy/config/reference.fasta`)
@@ -147,6 +158,7 @@ When prompted for CDS annotation selection:
 ### Prepare Input Data
 
 You can obtain sequences and metadata via:
+
 - **Automatic:** Run the ingest workflow (see [Ingest Workflow](#ingest-workflow))
 - **Manual:** Download from [NCBI Virus](https://www.ncbi.nlm.nih.gov/labs/virus/vssi/#/) and save to:
   - `data/sequences.fasta`
@@ -163,17 +175,20 @@ micromamba activate nextstrain
 ```
 
 **Build all segments (protein_xy + genome):**
+
 ```bash
 snakemake --cores 9 all
 ```
 
 **Build specific segment:**
+
 ```bash
 snakemake auspice/<your_virus>_protein_xy.json --cores 9
 snakemake auspice/<your_virus>_whole-genome.json --cores 9
 ```
 
 **Clean intermediate files (keep final outputs):**
+
 ```bash
 snakemake clean
 ```
@@ -189,6 +204,7 @@ auspice view --datasetDir auspice
 Open [http://localhost:4000](http://localhost:4000) in your browser.
 
 **For simultaneous visualizations, set a different port:**
+
 ```bash
 export PORT=4001
 auspice view --datasetDir auspice
@@ -199,12 +215,14 @@ auspice view --datasetDir auspice
 The `ingest/` subdirectory automates downloading and curating sequences from NCBI.
 
 **Configuration:**
+
 - Edit `ingest/config/config.yaml` to set:
   - `entrez_search_term` — search query for your virus
   - `ncbi_taxon_id` — NCBI taxonomy ID
   - `ncbi_datasets_fields` — metadata fields to retrieve
 
 **Run ingest:**
+
 ```bash
 cd ingest
 snakemake --cores 9 all
@@ -212,6 +230,7 @@ cd ../
 ```
 
 This produces:
+
 - `data/sequences.fasta`
 - `data/metadata.tsv`
 
@@ -227,15 +246,18 @@ The ingest pipeline is based on the Nextstrain [RSV ingest workflow](https://git
 ## Troubleshooting
 
 **Workflow fails at alignment step:**
+
 - Ensure `config/reference_sequence.gb` exists and contains valid GenBank features
 - Check that segment names (e.g., `protein_xy`, `genome`) match those in the `snakefile` line 34
 - Verify alignment parameters in `config/config.yaml` are appropriate for your sequence diversity
 
 **Auspice doesn't load metadata correctly:**
+
 - Confirm `data/metadata.tsv` has an `accession` column matching your FASTA sequence headers
 - Verify all dates are in ISO format (YYYY-MM-DD) using `config/config.yaml` date parameters
 
 **Reference extraction fails:**
+
 - Ensure GenBank file (`.gb`) has complete CDS annotations with `product` or `gene` qualifiers
 - Use the interactive prompts in `generate_from_genbank.py` to select the correct features
 
