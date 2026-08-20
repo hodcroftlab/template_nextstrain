@@ -217,7 +217,7 @@ The `ingest/` subdirectory automates downloading and curating sequences from NCB
 **Configuration:**
 
 - Edit `ingest/config/config.yaml` to set:
-  - `entrez_search_term` — search query for your virus
+  - `entrez_search_term` — search query for your virus, e.g. "Enterovirus D68"
   - `ncbi_taxon_id` — NCBI taxonomy ID
   - `ncbi_datasets_fields` — metadata fields to retrieve
 
