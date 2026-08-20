@@ -101,7 +101,7 @@ rule curate:
         expected_date_formats=config["curate"]["expected_date_formats"],
     output:
         merge = temp("data/merge_meta.tsv"),  # Final output file for publications metadata
-        meta="data/curated/all_meta.tsv"  # Final merged output file
+        final_metadata="data/curated/all_meta.tsv"  # Final merged output file
     shell:
         """        
         # Merge curated metadata
@@ -118,8 +118,8 @@ rule curate:
             --no-mask-failure \
             --expected-date-formats {params.expected_date_formats} \
             --id-column {params.strain_id_field} \
-            --output-metadata {output.meta}
-        echo "Curated metadata saved to {output.meta}"
+            --output-metadata {output.final_metadata}
+        echo "Curated metadata saved to {output.final_metadata}"
         """
 
 ##############################
