@@ -137,7 +137,7 @@ rule extract:
     params:
         product_name = "{seg}",
         taxid = TAXID,
-        annotation = lambda wildcards: f'--output_gff {wildcards.seg}/config/annotation.gff3' if wildcards.seg != "whole_genome" else ""
+        annotation = lambda wildcards: f'--output_gff3 {wildcards.seg}/config/annotation.gff3' if wildcards.seg != "whole_genome" else ""
 
     shell:
         """
