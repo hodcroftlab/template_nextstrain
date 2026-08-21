@@ -81,6 +81,17 @@ if FETCH_SEQUENCES == True:
             """
 
 ##############################
+# Remove all gaps (-) from the sequences
+###############################
+rule clean_sequences:
+    input:
+        files.SEQUENCES
+    output:
+        "data/sequences_cleaned.fasta"
+    shell:
+        "sed 's/-//g' {input} > {output}"
+
+##############################
 # AUGUR CURATE AND MERGE
 # Change the format of the dates in the metadata
 # Attention: ```augur curate``` only accepts iso 8 formats; please make sure that you save e.g. Excel files in the correct format
@@ -153,14 +164,13 @@ rule extract:
 rule blast:
     input: 
         blast_db_file = rules.extract.output.extracted_fasta,  
-        seqs_to_blast = rules.fetch.output.sequences
+        seqs_to_blast = rules.clean_sequences.output
     output:
         blast_out = "temp/{seg}/blast_out.csv"
     params:
         blast_db =  "temp/{seg}/blast_database"
     shell:
         """
-        sed -i 's/-//g' {input.seqs_to_blast}
         makeblastdb -in {input.blast_db_file} -out {params.blast_db} -dbtype nucl
         blastn -task blastn -query {input.seqs_to_blast} -db {params.blast_db} \
         -outfmt '10 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -out {output.blast_out} -evalue 0.0005
@@ -169,7 +179,7 @@ rule blast:
 rule blast_sort:
     input:
         blast_result = rules.blast.output.blast_out, # output blast (for your protein)
-        input_seqs = rules.fetch.output.sequences
+        input_seqs = rules.clean_sequences.output
     output:
         sequences = "{seg}/results/sequences.fasta"
         
