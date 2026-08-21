@@ -84,7 +84,7 @@ rule format_ncbi_dataset_report:
             | csvtk fix-quotes -Ht \
             | csvtk add-header -t -l -n {params.ncbi_datasets_fields:q} \
             | csvtk rename -t -f accession -n accession_version \
-            | csvtk -t mutate -f accession_version -n accession -p "^(.+?)\." \
+            | csvtk -t mutate -f accession_version -n accession -p r"^(.+?)\." \
             | csvtk del-quotes -t \
             | tsv-select -H -f accession --rest last \
             > {output.ncbi_dataset_tsv}
