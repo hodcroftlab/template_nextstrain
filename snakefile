@@ -33,6 +33,13 @@ wildcard_constraints:
 # Define segments to analyze
 segments = ['protein_xy', 'protein_yz','whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
 
+# Define min and max lengths for segments and genome
+SEGMENT_LENGTHS = {
+    'protein_xy': {'min': 600, 'max': 900},
+    'protein_yz': {'min': 2000, 'max': 2600},
+    'whole_genome': {'min': 6400, 'max': 8000}
+}
+
 # parameters
 FETCH_SEQUENCES = True
 
@@ -175,8 +182,8 @@ rule blast_sort:
         
     params:
         range = "{seg}",  # Determines which protein (or whole genome) is processed - names must match seg in wildcard_constraints
-        min_length = lambda wildcards: {"protein_xy": 600, "protein_yz": 2000, "whole_genome": 6400}[wildcards.seg],  # Min length
-        max_length = lambda wildcards: {"protein_xy": 900, "protein_yz": 2600, "whole_genome": 8000}[wildcards.seg]  # Max length
+        min_length = lambda wildcards: SEGMENT_LENGTHS[wildcards.seg]['min'],
+        max_length = lambda wildcards: SEGMENT_LENGTHS[wildcards.seg]['max']
     shell:
         """
         python scripts/blast_sort.py --blast {input.blast_result} \
