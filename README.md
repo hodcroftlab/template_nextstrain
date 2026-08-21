@@ -140,7 +140,7 @@ When prompted for CDS annotation selection:
 
 **Generated files:**
 
-- `config/reference_sequence.gb` — GenBank reference
+- `config/reference.gbk` — GenBank reference
 - `config/reference.fasta` — Whole genome FASTA (used by other rules)
 - Segment-specific files are generated automatically during the workflow (e.g., `protein_xy/config/reference.fasta`)
 

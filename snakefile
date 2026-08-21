@@ -44,7 +44,7 @@ rule files:
         dropped_strains =   "config/dropped_strains.txt",
         regions=            "config/geo_regions.tsv",
         lat_longs =         "config/lat_longs.tsv",
-        reference =         "config/reference_sequence.gb", ####TODO: provide a reference sequence (whole-genome) in genbank format
+        reference =         "config/reference.gbk", ####TODO: provide a reference sequence (whole-genome) in genbank format
         gff_reference =     "{seg}/config/annotation.gff3",
         auspice_config =    "{seg}/config/auspice_config.json",
         clades =            "{seg}/config/clades_genome.tsv",
