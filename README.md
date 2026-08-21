@@ -234,6 +234,7 @@ This produces:
 
 - `data/sequences.fasta`
 - `data/metadata.tsv`
+- `config/annotation.gff3`
 
 For detailed ingest instructions, see [`ingest/README.md`](ingest/README.md).
 
