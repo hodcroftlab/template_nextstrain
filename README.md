@@ -136,6 +136,7 @@ When prompted for CDS annotation selection:
 
 - Enter `[0]` for the first option
 - Enter `[product]` to use product names, or leave blank for manual selection
+  -  **NOTE** CDS or product names should be short and should _not_ have spaces - check your reference sequences on Genbank to see how they are named, and if necessary use manual selection to rename, or edit the resulting files afterwards
 - Enter `[2]` for the final selection
 
 **Generated files:**
