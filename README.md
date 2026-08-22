@@ -142,6 +142,7 @@ When prompted for CDS annotation selection:
 
 - `config/reference_sequence.gb` — GenBank reference
 - `config/reference.fasta` — Whole genome FASTA (used by other rules)
+- `config/annotation.gff3` - Whole genome annotation file
 - Segment-specific files are generated automatically during the workflow (e.g., `protein_xy/config/reference.fasta`)
 
 ### Update Configuration Files
@@ -234,7 +235,6 @@ This produces:
 
 - `data/sequences.fasta`
 - `data/metadata.tsv`
-- `config/annotation.gff3`
 
 For detailed ingest instructions, see [`ingest/README.md`](ingest/README.md).
 
