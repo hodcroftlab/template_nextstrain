@@ -225,7 +225,8 @@ rule filter:
         metadata =rules.curate.output.final_metadata,
         exclude = files.dropped_strains
     output:
-        sequences = "{seg}/results/filtered.fasta"
+        sequences = "{seg}/results/filtered.fasta",
+        reasons = "{seg}/results/filtering_reasons.tsv"
     params:
         group_by = "country",
         sequences_per_group = 4000, # add a limit per group
@@ -242,7 +243,8 @@ rule filter:
             --group-by {params.group_by} \
             --sequences-per-group {params.sequences_per_group} \
             --min-date {params.min_date} \
-            --output-sequences {output.sequences}
+            --output-sequences {output.sequences} \
+            --output-log {output.reasons}
         """
 # --exclude-where ... or other parameters can be added, see `augur filter --h` for more options
 
