@@ -9,6 +9,7 @@
 
 ###############
 TAXID = "<TAXID>"  # NCBI Taxonomy ID for your virus
+VIRUS_NAME = "<your_virus>" # name of your virus for file names, e.g. enterovirus_d68 (NO SPACES)
 
 if not config:
     configfile: "config/config.yaml"
@@ -64,7 +65,7 @@ files = rules.files.input
 # Expand augur JSON paths
 rule all:
     input:
-        augur_jsons = expand("auspice/<your_virus>_{segs}.json", segs=segments), ## TODO: replace <your_virus> with actual virus name (Ctrl+H). Typical naming convention: e.g., virus_A6
+        augur_jsons = expand(f"auspice/{VIRUS_NAME}_{{segs}}.json", segs=segments),  #double braces prevent segs being interpreted as fstring
         meta = files.METADATA,
         seq = files.SEQUENCES
 
@@ -483,7 +484,7 @@ rule export:
         strain_id_field= config["id_field"]
 
     output:
-        auspice_json = "auspice/<your_virus>_{seg}.json"
+        auspice_json = "auspice/{VIRUS_NAME}_{seg}.json"
         
     shell:
         """
@@ -502,9 +503,9 @@ rule export:
 rule rename_whole_genome:
     message: "Rename whole-genome built"
     input: 
-        json="auspice/<your_virus>_whole_genome.json"
+        json="auspice/{VIRUS_NAME}_whole_genome.json"
     output:
-        json="auspice/<your_virus>_whole-genome.json" # easier view in auspice
+        json="auspice/{VIRUS_NAME}_whole-genome.json" # easier view in auspice
     shell:
         """
         mv {input.json} {output.json}
