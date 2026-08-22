@@ -9,6 +9,7 @@
 
 ###############
 TAXID = "<TAXID>"  # NCBI Taxonomy ID for your virus
+VIRUS_NAME = "<your_virus>" # name of your virus for file names, e.g. enterovirus_d68 (NO SPACES)
 
 if not config:
     configfile: "config/config.yaml"
@@ -32,6 +33,13 @@ wildcard_constraints:
    
 # Define segments to analyze
 segments = ['protein_xy', 'protein_yz','whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
+
+# Define min and max lengths for segments and genome
+SEGMENT_LENGTHS = {
+    'protein_xy': {'min': 600, 'max': 900},
+    'protein_yz': {'min': 2000, 'max': 2600},
+    'whole_genome': {'min': 6400, 'max': 8000}
+}
 
 # parameters
 FETCH_SEQUENCES = True
@@ -57,7 +65,7 @@ files = rules.files.input
 # Expand augur JSON paths
 rule all:
     input:
-        augur_jsons = expand("auspice/<your_virus>_{segs}.json", segs=segments), ## TODO: replace <your_virus> with actual virus name (Ctrl+H). Typical naming convention: e.g., virus_A6
+        augur_jsons = expand(f"auspice/{VIRUS_NAME}_{{segs}}.json", segs=segments),  #double braces prevent segs being interpreted as fstring
         meta = files.METADATA,
         seq = files.SEQUENCES
 
@@ -175,8 +183,8 @@ rule blast_sort:
         
     params:
         range = "{seg}",  # Determines which protein (or whole genome) is processed - names must match seg in wildcard_constraints
-        min_length = lambda wildcards: {"protein_xy": 600, "protein_yz": 2000, "whole_genome": 6400}[wildcards.seg],  # Min length
-        max_length = lambda wildcards: {"protein_xy": 900, "protein_yz": 2600, "whole_genome": 8000}[wildcards.seg]  # Max length
+        min_length = lambda wildcards: SEGMENT_LENGTHS[wildcards.seg]['min'],
+        max_length = lambda wildcards: SEGMENT_LENGTHS[wildcards.seg]['max']
     shell:
         """
         python scripts/blast_sort.py --blast {input.blast_result} \
@@ -476,7 +484,7 @@ rule export:
         strain_id_field= config["id_field"]
 
     output:
-        auspice_json = "auspice/<your_virus>_{seg}.json"
+        auspice_json = "auspice/{VIRUS_NAME}_{seg}.json"
         
     shell:
         """
@@ -495,9 +503,9 @@ rule export:
 rule rename_whole_genome:
     message: "Rename whole-genome built"
     input: 
-        json="auspice/<your_virus>_whole_genome.json"
+        json="auspice/{VIRUS_NAME}_whole_genome.json"
     output:
-        json="auspice/<your_virus>_whole-genome.json" # easier view in auspice
+        json="auspice/{VIRUS_NAME}_whole-genome.json" # easier view in auspice
     shell:
         """
         mv {input.json} {output.json}

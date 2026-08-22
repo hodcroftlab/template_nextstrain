@@ -120,9 +120,10 @@ This repository includes the following directories and files:
 Edit the `snakefile` to set your virus details:
 
 - **Line 11:** Set `TAXID` to the NCBI Taxonomy ID for your virus
-- **Line 30:** Set `wildcard_constraints` to match your analysis (e.g., `"vp1|whole_genome"`)
-- **Line 34:** Update `segments` list to match your analysis (e.g., `['vp1', 'whole_genome']` - should match the above)
-- **Line 60:** Replace `<your_virus>` with your virus name in the output file naming
+- **Line 12:** Replace `<your_virus>` with your virus name for output files, e.g. `enterovirus_d68` (no spaces)
+- **Line 31:** Set `wildcard_constraints` to match your analysis (e.g., `"vp1|whole_genome"`)
+- **Line 35:** Update `segments` list to match your analysis (e.g., `['vp1', 'whole_genome']` - should match the above)
+- **Line 38:** Define the minimum and maximum lengths of genes and the genome to include
 
 ### Generate Reference Files
 
