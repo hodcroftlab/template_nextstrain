@@ -32,7 +32,7 @@ wildcard_constraints:
     seg="protein_xy|protein_yz|genome"  # Define segments to analyze, e.g. vp1, whole-genome. This wildcard will be used in the rules "{seg}" to define the path or protein to use
 
 # Define segments to analyze
-segments = ['protein_xy', 'protein_yz','whole-genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
+segments = ['protein_xy', 'protein_yz','genome'] # This is only for the expand in rule all. TODO: replace <protein_xy> with "vp1" or another protein for which you would like to have a separate workflow
 
 # parameters
 FETCH_SEQUENCES = True

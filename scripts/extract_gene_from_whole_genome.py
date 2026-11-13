@@ -23,7 +23,7 @@ def parse_args():
 def extract_protein(genbank_file, output_fasta, product_name, output_genbank, output_gff3=None, taxid=None):
     os.makedirs(os.path.dirname(output_fasta), exist_ok=True)  
     
-    if product_name.lower() == "whole_genome":
+    if product_name.lower() == "genome":
         for record in SeqIO.parse(genbank_file, "genbank"):
             with open(output_fasta, "w") as output_handle:
                 output_handle.write(f">{record.id}\n{record.seq}\n")
@@ -32,6 +32,12 @@ def extract_protein(genbank_file, output_fasta, product_name, output_genbank, ou
             with open(output_genbank, "w") as output_handle:
                 SeqIO.write(record, output_handle, "genbank")
             print(f"Whole genome GenBank file saved to {output_genbank}")
+
+            # The genome branch must also emit the annotation, because the
+            # workflow declares {seg}/config/annotation.gff3 as an output of rule
+            # extract. CDS coordinates are already absolute for the full record.
+            if output_gff3:
+                create_gff3(record, output_gff3, product_name, taxid)
         return
 
     found = False

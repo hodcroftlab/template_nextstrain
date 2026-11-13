@@ -39,7 +39,7 @@ def main():
     if args.debug: print("*** Filtering counts ***")
 
     # Process sequences based on the specified length range
-    if args.range != "whole_genome":
+    if args.range != "genome":
             keep_mask = (blast_results.diff_length_ref >= length_range[0]) & (blast_results.diff_length_ref <= length_range[1])
             if args.debug: print(f"Sequences passing length filter: {keep_mask.sum()}")
             if args.debug: print(f"Sequences rejected by length filter: {(~keep_mask).sum()}")
