@@ -9,9 +9,12 @@ scripts/__pycache__/
 *.json ## make sure to exclude all large json files
 
 # Usually excluded
-# .env
-# data/
-# */data/
-# */results/
-# auspice/*
+.env
+data/*
+*/benchmarks/
+*/data/
+*/results/
+auspice/*
+temp/*
+*/logs/
 
