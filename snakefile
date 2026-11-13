@@ -427,7 +427,6 @@ rule ancestral:
             --output-node-data {output.node_data} \
             --output-translations {params.output_translation_template} \
             --output-sequences {params.root} \
-            --keep-ambiguous \
             --inference {params.inference} \
             > {log} 2>&1
         """
