@@ -13,7 +13,7 @@ rule sort:
     input:
         sequences = rules.curate.output.sequences
     output:
-        "data/sequences.fasta",
+        "results/sequences.fasta",
     shell:
         '''
         seqkit rmdup {input.sequences} > {output}
@@ -21,10 +21,11 @@ rule sort:
 
 rule metadata:
     input:
-        metadata = rules.curate.output.metadata,
-        sequences = "data/sequences.fasta"
+        # via add_metadata_columns so the `url` column is present
+        metadata = rules.add_metadata_columns.output.metadata,
+        sequences = "results/sequences.fasta"
     output:
-        metadata = "data/metadata.tsv"
+        metadata = "results/metadata_raw.tsv"
     run:
         import pandas as pd
         from Bio import SeqIO
@@ -35,28 +36,32 @@ rule metadata:
 
 rule nextclade:
     input:
-        sequences = "data/sequences.fasta",
+        sequences = "results/sequences.fasta",
         ref = "data/references/reference.fasta"
     output:
-        nextclade = "data/nextclade.tsv"
+        nextclade = "results/nextclade.tsv"
     params:
         dataset = "data/references/",
-        output_columns = "seqName clade qc.overallScore qc.overallStatus alignmentScore  alignmentStart  alignmentEnd  coverage dynamic"
-    threads: 8
+        output_columns = "seqName clade qc.overallScore qc.overallStatus alignmentScore  alignmentStart  alignmentEnd  coverage dynamic",
+        min_length = config["curate"]["min_length"]
+    log:
+        "logs/nextclade.txt"
+    threads: workflow.cores
     shell:
         """
         nextclade3 run -D {params.dataset}  -j {threads} \
                           --output-columns-selection {params.output_columns} \
+                          --min-length {params.min_length} \
                           --output-tsv {output.nextclade} \
-                          {input.sequences}
+                          {input.sequences} > {log} 2>&1
         """
 
 rule extend_metadata: 
     input:
-        nextclade = "data/nextclade.tsv",
-        metadata = "data/metadata_raw.tsv"
+        nextclade = "results/nextclade.tsv",
+        metadata = "results/metadata_raw.tsv"
     output:
-        metadata = "data/metadata.tsv"
+        metadata = "results/metadata.tsv"
     shell:
         """
         python3 bin/extend-metadata.py --metadata {input.metadata} \

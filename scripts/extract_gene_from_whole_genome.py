@@ -1,12 +1,12 @@
-# To run this script use: 
-# python extract_gene_from_whole_genome.py --genbank_file ../ingest/data/references/full_reference.gb --output_directory ../data/references --product_names "protein_xy"
-# use  nargs='+', if want multiple protein names
-
+#To run this script use: 
+# python extract_gene_from_whole_genome.py --genbank_file ../ingest/data/references/nl63_full_reference.gb --output_directory ../data/references --product_names "spike protein" "membrane protein" "nucleocapsid protein"
+#use  nargs='+', if want multiple protein names
 import os
 import argparse
 from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 import re
+# import ipdb
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -53,7 +53,7 @@ def extract_protein(genbank_file, output_fasta, product_name, output_genbank, ou
                     nucleotide_sequence = feature.location.extract(record.seq)
 
                     with open(output_fasta, "w") as output_handle:
-                        output_handle.write(f">{product_name}\n{nucleotide_sequence}\n")
+                        output_handle.write(f">{accession} {product_name}\n{nucleotide_sequence}\n")
                     print(f"Protein {product_name} saved to {output_fasta}")
                     
                     extracted_record = record[feature.location.start:feature.location.end]

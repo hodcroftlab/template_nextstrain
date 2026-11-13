@@ -52,6 +52,7 @@ def annotate_sequence(seq, cds):
 def clean_qualifier(value):
     """Remove common patterns from qualifier values."""
     value = re.sub(r'^(protein|protease|protien)[\s_|]*', '', value, flags=re.IGNORECASE)
+    value = re.sub(r'[\s_|]*(protein|protease|protien)$', '', value, flags=re.IGNORECASE)
     value = re.sub(r'\s*\([\w\d]+\)\s*$', '', value)
     value = re.sub(r'__\d[A-D]_.*', '', value)
     return value.strip()
@@ -191,7 +192,7 @@ if __name__=="__main__":
                 if "Parent" in new_attributes: new_attributes.pop("Parent")
                 streamlined_cds[segment_id].append([new_entries, new_attributes])
 
-    gff_fname = f"{args.output_dir}/annotation.gff3"
+    gff_fname = f"{args.output_dir}/genome_annotation.gff3"
     print(f"\nWriting annotation to GFF file: {gff_fname}\n")
     # write the gff file as a simple text file line by line
     with open(gff_fname, "w") as f:
